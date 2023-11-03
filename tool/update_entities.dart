@@ -22,10 +22,25 @@ void main() {
   }
 
   final outputPath = '${p.current}/lib/src/assets/html_entities.dart';
-  final stringMap = const JsonEncoder.withIndent('  ')
+  var stringMap = const JsonEncoder.withIndent('  ')
       .convert(result)
       .replaceAll(r'"$"', r'r"$"')
       .replaceAll(r'"\\"', r'r"\"');
+
+  final reg = RegExp('"(.*?)"(:)');
+  stringMap = stringMap.replaceAllMapped(reg, (match) {
+    // String originStr = match.group(0)!;
+    final replaceStr = match.group(1)!;
+    final endStr = match.group(2)!;
+
+    var newStr = replaceEncryStringByList(replaceStr);
+    newStr += endStr;
+
+    print('$replaceStr,$newStr');
+
+    return newStr;
+  });
+
   final output = '''
 // Generated file. do not edit.
 //
@@ -33,7 +48,35 @@ void main() {
 // Script: tool/update_entities.dart
 // ignore_for_file: prefer_single_quotes
 
-const htmlEntitiesMap = $stringMap;
+final htmlEntitiesMap = $stringMap;
 ''';
   File(outputPath).writeAsStringSync(output);
+}
+
+String replaceEncryStringByList(String replaceStr) {
+  replaceStr = replaceStr.replaceAll(r'\n', '\n');
+
+  var newStr = '[';
+
+  final codePoints = replaceStr.runes;
+  final list = <String>[];
+  for (final element in codePoints) {
+    list.add(String.fromCharCode(element));
+  }
+
+  for (var codeUnit in list) {
+    if (codeUnit == '"') {
+      codeUnit = r'\"';
+    }
+    if (codeUnit == '\n') {
+      codeUnit = r'\n';
+    }
+
+    // ignore: use_string_buffers
+    newStr += '"$codeUnit",';
+  }
+  newStr += '].join()';
+  // print(newStr);
+
+  return newStr;
 }
